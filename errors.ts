@@ -15,3 +15,9 @@ export class InvalidStateError extends Error {
     super("Invalid state");
   }
 }
+
+export class InvalidTransportURL extends Error {
+  constructor(addr: string) {
+    super(`invalid transport url: ${addr}`);
+  }
+}
