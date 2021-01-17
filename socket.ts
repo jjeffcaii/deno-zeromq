@@ -1,6 +1,12 @@
 import { BufReader, BufWriter, log } from "./deps.ts";
 import { Connection, createConnection } from "./protocol/codec.ts";
-import { CommandType, Frame, FrameType, Greeting } from "./protocol/frame.ts";
+import {
+  CommandType,
+  FLAG_MORE,
+  Frame,
+  FrameType,
+  Greeting,
+} from "./protocol/frame.ts";
 import { SocketType } from "./protocol/codec.ts";
 import {
   bind,
@@ -11,6 +17,7 @@ import {
   TransportType,
 } from "./transport.ts";
 import { METADATA_KEY_IDENTITY, METADATA_KEY_SOCKET_TYPE } from "./consts.ts";
+import { ConnectionNotReadyError } from "./errors.ts";
 
 export type Message = Uint8Array | string;
 
@@ -19,7 +26,7 @@ export interface Socket {
   connect(addr: string): Promise<void>;
   close(): Promise<void>;
 
-  send(req: Message, ...rest: Message[]): Promise<void>;
+  send(req: Message): Promise<void>;
   receive(): Promise<Message[]>;
 }
 
@@ -29,29 +36,24 @@ export class SocketImpl implements Socket {
   constructor(private socketType: SocketType) {
   }
 
-  async send(req: Message, ...rest: Message[]): Promise<void> {
+  async send(req: Message): Promise<void> {
     const c = (this.transport as ClientTransport).connected()!;
-    await c.write(Frame.EMPTY);
+    await c.write(Frame.EMPTY_HAS_MORE);
     // write first
-    const first = Frame.builder().data(req).hasMore(rest.length > 0).build();
+    const first = Frame.builder().data(req).build();
     await c.write(first);
-    if (rest.length > 0) {
-      // write rest
-      for (let i = 0; i < rest.length - 1; i++) {
-        const next = Frame.builder().data(rest[i]).hasMore(true).build();
-        await c.write(next);
-      }
-      // write last
-      const last = Frame.builder().data(rest[rest.length - 1]).hasMore(false)
-        .build();
-      await c.write(last);
-    }
-    // flush
     await c.flush();
   }
 
-  receive(): Promise<Message[]> {
-    throw new Error("Method not implemented.");
+  async receive(): Promise<Message[]> {
+    if (!this.transport) throw new ConnectionNotReadyError();
+    const conn = (this.transport as ClientTransport).connected()!;
+    const first = await conn.read() as Frame;
+    if ((first.flags & FLAG_MORE) === 0) {
+      return [];
+    }
+    const next = await conn.read() as Frame;
+    return [new TextDecoder().decode(next.payload)];
   }
 
   async bind(addr: string): Promise<void> {
@@ -65,6 +67,10 @@ export class SocketImpl implements Socket {
     if (this.transport) throw new Error("connect already!");
     this.transport = connect(addr);
     const conn = await this.transport.connect();
+    await this.handshake(conn);
+  }
+
+  private async handshake(conn: Connection): Promise<void> {
     await sendGreeting(conn, Greeting.mock());
     const first = await conn.read();
     if (first instanceof Greeting) {
@@ -96,8 +102,6 @@ export class SocketImpl implements Socket {
     } else {
       throw new Error("handshake failed!");
     }
-
-    this.handleRecv(conn);
   }
 
   close(): Promise<void> {

@@ -21,3 +21,9 @@ export class InvalidTransportURL extends Error {
     super(`invalid transport url: ${addr}`);
   }
 }
+
+export class ConnectionNotReadyError extends Error {
+  constructor() {
+    super("connection is not ready");
+  }
+}

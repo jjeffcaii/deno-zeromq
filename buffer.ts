@@ -15,6 +15,14 @@ export class Decoder {
     return this.b[offset];
   }
 
+  readUint64(offset = 0): bigint {
+    return new DataView(this.b.buffer).getBigUint64(offset);
+  }
+
+  readInt64(offset = 0): bigint {
+    return new DataView(this.b.buffer).getBigInt64(offset);
+  }
+
   readUint32(offset = 0): number {
     return new DataView(this.b.buffer).getUint32(offset);
   }

@@ -77,7 +77,7 @@ export class Frame {
     return new FrameBuilder();
   }
 
-  static EMPTY: Frame = new Frame(new Uint8Array([FLAG_MORE, 0]));
+  static EMPTY_HAS_MORE: Frame = new Frame(new Uint8Array([FLAG_MORE, 0]));
 
   constructor(private body: Uint8Array) {
   }
@@ -88,6 +88,21 @@ export class Frame {
 
   bytes(): Uint8Array {
     return this.body;
+  }
+
+  get payload(): Uint8Array {
+    const isLong = (this.flags & FLAG_LONG) !== 0;
+    const dec = new Decoder(this.body);
+    let n = 0;
+    let offset = 1;
+    if (isLong) {
+      n = Number(dec.readUint64(offset));
+      offset += 4;
+    } else {
+      n = dec.readByte(offset);
+      offset++;
+    }
+    return dec.readUint8Array(n, offset);
   }
 
   get type(): FrameType {
