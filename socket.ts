@@ -1,66 +1,46 @@
-import { BufReader, BufWriter, log } from "./deps.ts";
-import { Connection, createConnection } from "./protocol/codec.ts";
+import { log } from "./deps.ts";
+import { Connection } from "./protocol/connection.ts";
 import {
-  CommandType,
-  FLAG_MORE,
-  Frame,
-  FrameType,
-  Greeting,
-} from "./protocol/frame.ts";
-import { SocketType } from "./protocol/codec.ts";
-import {
-  bind,
-  ClientTransport,
-  connect,
-  ServerTransport,
-  TcpClientTransport,
-  TransportType,
-} from "./transport.ts";
+  Connector,
+  MessageLike,
+  Receiver,
+  Sender,
+  SocketType,
+} from "./types.ts";
+import { Greeting } from "./protocol/greeting.ts";
+import { FLAG_MORE, Frame, FrameType } from "./protocol/frame.ts";
+import { ClientTransport, connect } from "./transport.ts";
 import { METADATA_KEY_IDENTITY, METADATA_KEY_SOCKET_TYPE } from "./consts.ts";
 import { ConnectionNotReadyError } from "./errors.ts";
+import { DataFrame } from "./protocol/frame_data.ts";
+import { CommandFrame, CommandName } from "./protocol/frame_command.ts";
+import { ReadyCommandFrame } from "./protocol/frame_command_ready.ts";
 
-export type Message = Uint8Array | string;
-
-export interface Socket {
-  bind(addr: string): Promise<void>;
-  connect(addr: string): Promise<void>;
-  close(): Promise<void>;
-
-  send(req: Message): Promise<void>;
-  receive(): Promise<Message[]>;
-}
-
-export class SocketImpl implements Socket {
-  private transport?: ClientTransport | ServerTransport;
+export class Socket implements Connector, Sender, Receiver {
+  private transport?: ClientTransport;
 
   constructor(private socketType: SocketType) {
   }
 
-  async send(req: Message): Promise<void> {
+  async send(req: MessageLike): Promise<void> {
     const c = (this.transport as ClientTransport).connected()!;
     await c.write(Frame.EMPTY_HAS_MORE);
     // write first
-    const first = Frame.builder().data(req).build();
+    const first = DataFrame.builder().payload(req).build();
     await c.write(first);
     await c.flush();
   }
 
-  async receive(): Promise<Message[]> {
+  async receive(): Promise<MessageLike[]> {
     if (!this.transport) throw new ConnectionNotReadyError();
     const conn = (this.transport as ClientTransport).connected()!;
     const first = await conn.read() as Frame;
     if ((first.flags & FLAG_MORE) === 0) {
       return [];
     }
-    const next = await conn.read() as Frame;
-    return [new TextDecoder().decode(next.payload)];
-  }
-
-  async bind(addr: string): Promise<void> {
-    if (this.transport) throw new Error("bind already!");
-    const tp = bind(addr);
-    this.transport = tp;
-    await tp.bind();
+    const next = await conn.read();
+    const data = new DataFrame(next.bytes());
+    return [data.payload];
   }
 
   async connect(addr: string): Promise<void> {
@@ -71,108 +51,27 @@ export class SocketImpl implements Socket {
   }
 
   private async handshake(conn: Connection): Promise<void> {
-    await sendGreeting(conn, Greeting.mock());
-    const first = await conn.read();
-    if (first instanceof Greeting) {
-      this.onGreeting(conn, first);
-    } else {
-      throw new Error("handshake failed!");
-    }
+    // TODO: signature + major -> rest of greeting
+    await conn.write(Greeting.builder().build());
+    await conn.flush();
 
-    const second = await conn.read();
-    if (second instanceof Frame && second.type === FrameType.Command) {
-      const cmd = second.command;
-      if (cmd.name !== CommandType.Ready) {
-        throw new Error("handshake failed!");
-      }
-      const ready = cmd.ready;
-      log.info(`COMMAND[READY]: ${ready}`);
+    const greeting = await conn.readGreeting();
+    log.debug(`RCV: greeting=${greeting}`);
 
-      const readyReply = Frame.builder()
-        .command()
-        .ready(
-          METADATA_KEY_SOCKET_TYPE,
-          this.socketType,
-          METADATA_KEY_IDENTITY,
-          "",
-        )
-        .build();
-      await conn.write(readyReply);
-      await conn.flush();
-    } else {
-      throw new Error("handshake failed!");
-    }
-  }
+    const first = await conn.read() as Frame;
+    if (first.type !== FrameType.Command) throw new Error("handshake failed!");
 
-  close(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
+    const cmd = new CommandFrame(first.bytes());
+    if (cmd.name !== CommandName.Ready) throw new Error("handshake failed!");
 
-  private onGreeting(
-    conn: Connection,
-    greeting: Greeting,
-  ): Promise<void> {
-    switch (this.transport!.type()) {
-      case TransportType.CLIENT:
-        break;
-      case TransportType.SERVER:
-        break;
-      default:
-        break;
-    }
+    const ready = new ReadyCommandFrame(first.bytes());
+    log.debug(`RCV: ready=${ready}`);
 
-    log.info(`GREETING: ${greeting}`);
-    return Promise.resolve();
-  }
-
-  private async onFrame(conn: Connection, frame: Frame): Promise<void> {
-    switch (frame.type) {
-      case FrameType.Command: {
-        const cmd = frame.command;
-        if (cmd.name === CommandType.Ready) {
-          const ready = cmd.ready;
-          log.info(`COMMAND[READY]: ${ready}`);
-
-          const ready2 = Frame.builder()
-            .command()
-            .ready(
-              METADATA_KEY_SOCKET_TYPE,
-              this.socketType,
-              METADATA_KEY_IDENTITY,
-              "",
-            )
-            .build();
-          await conn.write(ready2);
-          await conn.flush();
-        }
-        break;
-      }
-      case FrameType.Message: {
-        break;
-      }
-      default:
-        break;
-    }
-    return Promise.resolve();
-  }
-
-  async handleRecv(conn: Connection) {
-    for await (const msg of conn) {
-      if (msg instanceof Greeting) {
-        await this.onGreeting(conn, msg);
-      } else if (msg instanceof Frame) {
-        await this.onFrame(conn, msg);
-      } else {
-        throw new Error("unreachable!");
-      }
-    }
+    const readyReply = ReadyCommandFrame.builder()
+      .set(METADATA_KEY_SOCKET_TYPE, this.socketType)
+      .set(METADATA_KEY_IDENTITY, "")
+      .build();
+    await conn.write(readyReply);
+    await conn.flush();
   }
 }
-
-const sendGreeting = async (
-  c: Connection,
-  greeting: Greeting,
-): Promise<void> => {
-  await c.write(greeting);
-  await c.flush();
-};

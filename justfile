@@ -1,6 +1,12 @@
-alias e := echo
+alias rep := reply
+alias req := request
 
-echo:
-  deno run -A echoServer.ts
 fmt:
   deno fmt
+lock:
+  rm -f lock.json
+  deno cache --lock=lock.json --lock-write deps.ts
+reply:
+  deno run --allow-net ./examples/reply.ts
+request:
+  deno run --allow-net ./examples/request.ts

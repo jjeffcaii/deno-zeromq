@@ -1,7 +1,5 @@
 import { Frame } from "./protocol/frame.ts";
-
-const TEXT_ENCODER = new TextEncoder();
-const TEXT_DECODER = new TextDecoder();
+import { TEXT_ENCODER, UTF8_DECODER } from "./misc.ts";
 
 export class Decoder {
   constructor(private b: Uint8Array) {
@@ -43,7 +41,7 @@ export class Decoder {
     return this.b.subarray(offset, offset + len);
   }
 
-  readString(len: number, offset = 0, dec = TEXT_DECODER): string {
+  readString(len: number, offset = 0, dec = UTF8_DECODER): string {
     return dec.decode(this.readUint8Array(len, offset));
   }
 }
