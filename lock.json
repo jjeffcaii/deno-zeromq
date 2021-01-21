@@ -1,0 +1,22 @@
+{
+  "https://deno.land/std@0.84.0/_util/assert.ts": "2f868145a042a11d5ad0a3c748dcf580add8a0dbc0e876eaa0026303a5488f58",
+  "https://deno.land/std@0.84.0/async/deferred.ts": "f89ed49ba5e1dd0227c6bd5b23f017be46c3f92e4f0338dda08ff5aa54b9f6c9",
+  "https://deno.land/std@0.84.0/async/delay.ts": "9de1d8d07d1927767ab7f82434b883f3d8294fb19cad819691a2ad81a728cf3d",
+  "https://deno.land/std@0.84.0/async/mod.ts": "253b41c658d768613eacfb11caa0a9ca7148442f932018a45576f7f27554c853",
+  "https://deno.land/std@0.84.0/async/mux_async_iterator.ts": "b9091909db04cdb0af6f7807677372f64c1488de6c4bd86004511b064bf230d6",
+  "https://deno.land/std@0.84.0/async/pool.ts": "35db39af9325252a726761953ca4fed8f5483c95630bbb29c7c5ccc18e536c85",
+  "https://deno.land/std@0.84.0/bytes/mod.ts": "1ae1ccfe98c4b979f12b015982c7444f81fcb921bea7aa215bf37d84f46e1e13",
+  "https://deno.land/std@0.84.0/encoding/utf8.ts": "ce9becd1224dea119636a4cdcbce9dae016eb2cce4154d4fa352da166321a7b8",
+  "https://deno.land/std@0.84.0/fmt/colors.ts": "d253f2367e5feebcf0f49676533949c09ea07a2d95fb74958f6f5c1c22fbec49",
+  "https://deno.land/std@0.84.0/fs/exists.ts": "b0d2e31654819cc2a8d37df45d6b14686c0cc1d802e9ff09e902a63e98b85a00",
+  "https://deno.land/std@0.84.0/io/bufio.ts": "60d292248c8b32b3d8d13a4336b0c381b2dce5b9c9b50a4930205dea87eaf456",
+  "https://deno.land/std@0.84.0/io/ioutil.ts": "a6c9cd94d4cbdcebc1e407403523819c6b9eae67fcba302574b337062705384c",
+  "https://deno.land/std@0.84.0/io/mod.ts": "d57aca2ae617eb5bef2e9c0d7373161c9cbcbd517b9a9196786419ea9503f80b",
+  "https://deno.land/std@0.84.0/io/readers.ts": "279dd7d8e7c52e3c57a94c96c69dea57c6ed91e4d53c0aa0353957699450f59f",
+  "https://deno.land/std@0.84.0/io/streams.ts": "23644a2b1b55e1eb60ddc3dcc077a0e28efe4496c6a01deaff9f081df075dd87",
+  "https://deno.land/std@0.84.0/io/writers.ts": "df6d74feed570d06404a69ebd66b10bbd4288d6aa0b34000f0449e2e76078843",
+  "https://deno.land/std@0.84.0/log/handlers.ts": "8dfe91b35f58ec8b4401561a7561df4d40445e4f8bb26a8cfe13e38545c76414",
+  "https://deno.land/std@0.84.0/log/levels.ts": "088a883039ece5fa0da5f74bc7688654045ea7cb01bf200b438191a28d728eae",
+  "https://deno.land/std@0.84.0/log/logger.ts": "6b2dd8cbe6f407100b9becfe61595d7681f8ce3692412fad843de84d617a038e",
+  "https://deno.land/std@0.84.0/log/mod.ts": "b802000f30f7f15dcc02e7b350d4a7bfb927e1196169d708467af59032b669ea"
+}

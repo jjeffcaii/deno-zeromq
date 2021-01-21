@@ -1,10 +1,10 @@
-import { Context, Socket, SocketType } from "../mod.ts";
+import { log } from "../deps.ts";
+import * as zmq from "../mod.ts";
 
-const context = new Context();
-const socket: Socket = context.createSocket(SocketType.REQ);
+const socket = zmq.Request();
 await socket.connect("tcp://127.0.0.1:5555");
 
 await socket.send("Foo");
 
-const [reply] = await socket.receive();
-console.log("REP:", reply);
+const [res] = await socket.receive();
+log.info(`Receive: ${new TextDecoder().decode(res as Uint8Array)}`);

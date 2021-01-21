@@ -1,4 +1,4 @@
-import { Connection, createConnection } from "./protocol/codec.ts";
+import { Connection, createConnection } from "./protocol/connection.ts";
 import { BufReader, BufWriter } from "./deps.ts";
 import { InvalidTransportURL } from "./errors.ts";
 
@@ -106,6 +106,11 @@ async function* iter(listener?: Deno.Listener) {
   for await (const rawConn of listener) {
     const reader = new BufReader(rawConn);
     const writer = new BufWriter(rawConn);
-    yield createConnection(reader, writer);
+    yield createConnection(reader, writer, (): Promise<void> => {
+      return new Promise((resolve) => {
+        rawConn.close();
+        resolve();
+      });
+    });
   }
 }
