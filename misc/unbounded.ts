@@ -1,4 +1,4 @@
-import { Deferred, deferred } from "./deps.ts";
+import { Deferred, deferred } from "../deps.ts";
 
 export class Unbounded<T> {
   #head?: Deferred<T> = deferred();

@@ -1,4 +1,4 @@
-import { ASCII_DECODER, TEXT_ENCODER } from "../misc.ts";
+import { ASCII_DECODER, TEXT_ENCODER } from "../misc/mod.ts";
 
 export enum SecurityMechanism {
   NULL = "NULL",

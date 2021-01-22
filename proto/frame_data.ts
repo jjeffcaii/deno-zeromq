@@ -1,5 +1,4 @@
-import { Decoder, Encoder } from "../codec.ts";
-import { TEXT_ENCODER, UTF8_DECODER } from "../misc.ts";
+import { Decoder, Encoder, TEXT_ENCODER } from "../misc/codec.ts";
 import { FLAG_LONG, FLAG_MORE, Frame } from "./frame.ts";
 
 export interface Builder {

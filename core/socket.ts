@@ -1,20 +1,24 @@
-import { log } from "./deps.ts";
-import { Connection } from "./protocol/connection.ts";
+import { log } from "../deps.ts";
+import { ClientTransport, connect, Connection } from "../transport/mod.ts";
 import {
   Connector,
   MessageLike,
   Receiver,
   Sender,
   SocketType,
-} from "./types.ts";
-import { Greeting } from "./protocol/greeting.ts";
-import { FLAG_MORE, Frame, FrameType } from "./protocol/frame.ts";
-import { ClientTransport, connect } from "./transport.ts";
-import { METADATA_KEY_IDENTITY, METADATA_KEY_SOCKET_TYPE } from "./consts.ts";
-import { ConnectionNotReadyError } from "./errors.ts";
-import { DataFrame } from "./protocol/frame_data.ts";
-import { CommandFrame, CommandName } from "./protocol/frame_command.ts";
-import { ReadyCommandFrame } from "./protocol/frame_command_ready.ts";
+} from "../types.ts";
+import {
+  CommandFrame,
+  CommandName,
+  DataFrame,
+  FLAG_MORE,
+  Frame,
+  FrameType,
+  Greeting,
+  ReadyCommandFrame,
+} from "../proto/mod.ts";
+import { METADATA_KEY_IDENTITY, METADATA_KEY_SOCKET_TYPE } from "../consts.ts";
+import { ConnectionNotReadyError } from "../errors.ts";
 
 export class Socket implements Connector, Sender, Receiver {
   private transport?: ClientTransport;
@@ -22,12 +26,23 @@ export class Socket implements Connector, Sender, Receiver {
   constructor(private socketType: SocketType) {
   }
 
-  async send(req: MessageLike): Promise<void> {
+  async send(req: MessageLike, ...other: MessageLike[]): Promise<void> {
     const c = (this.transport as ClientTransport).connected()!;
     await c.write(Frame.EMPTY_HAS_MORE);
+
+    const [...rest,last] = [req, ...other];
+
+
+    rest.map(it => DataFrame.builder().hasMore(true).payload(it))
+
+
     // write first
-    const first = DataFrame.builder().payload(req).build();
+    const first = DataFrame.builder()
+      .hasMore(other.length > 0)
+      .payload(req)
+      .build();
     await c.write(first);
+
     await c.flush();
   }
 

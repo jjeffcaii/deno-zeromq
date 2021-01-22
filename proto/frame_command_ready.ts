@@ -1,4 +1,4 @@
-import { Decoder, Encoder } from "../codec.ts";
+import { Decoder, Encoder } from "../misc/mod.ts";
 import { FLAG_COMMAND, Frame } from "./frame.ts";
 import { CommandName } from "./frame_command.ts";
 

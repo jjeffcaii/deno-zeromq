@@ -1,6 +1,6 @@
-import { Connection, createConnection } from "./protocol/connection.ts";
-import { BufReader, BufWriter } from "./deps.ts";
-import { InvalidTransportURL } from "./errors.ts";
+import { Connection, createConnection } from "./connection.ts";
+import { BufReader, BufWriter } from "../deps.ts";
+import { InvalidTransportURL } from "../errors.ts";
 
 export enum TransportType {
   CLIENT,

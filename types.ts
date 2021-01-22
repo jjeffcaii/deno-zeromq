@@ -12,7 +12,7 @@ export interface Connector {
 }
 
 export interface Sender {
-  send(msg: MessageLike): Promise<void>;
+  send(msg: MessageLike, ...rest: MessageLike[]): Promise<void>;
 }
 
 export interface Receiver {

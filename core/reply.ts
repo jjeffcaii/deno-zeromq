@@ -1,15 +1,18 @@
-import { Connection } from "./protocol/connection.ts";
-import { bind, ServerTransport } from "./transport.ts";
-import { MessageLike, Sender, SocketType } from "./types.ts";
-import { log } from "./deps.ts";
-import { Frame, FrameType } from "./protocol/frame.ts";
-import { Greeting } from "./protocol/greeting.ts";
-import { METADATA_KEY_SOCKET_TYPE } from "./consts.ts";
-import { Unbounded } from "./unbounded.ts";
-import { EOFError } from "./errors.ts";
-import { DataFrame } from "./protocol/frame_data.ts";
-import { ReadyCommandFrame } from "./protocol/frame_command_ready.ts";
-import { CommandFrame, CommandName } from "./protocol/frame_command.ts";
+import { bind, Connection, ServerTransport } from "../transport/mod.ts";
+import { MessageLike, Sender, SocketType } from "../types.ts";
+import { log } from "../deps.ts";
+import {
+  CommandFrame,
+  CommandName,
+  DataFrame,
+  Frame,
+  FrameType,
+  Greeting,
+  ReadyCommandFrame,
+} from "../proto/mod.ts";
+import { METADATA_KEY_SOCKET_TYPE } from "../consts.ts";
+import { Unbounded } from "../misc/mod.ts";
+import { EOFError } from "../errors.ts";
 
 export interface Replier extends Sender {
   [Symbol.asyncIterator](): AsyncIterableIterator<MessageLike[]>;
