@@ -1,10 +1,7 @@
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.83.0/testing/asserts.ts";
+import { assertEquals } from "../deps.ts";
 import { Unbounded } from "./unbounded.ts";
 
-Deno.test("mux", async () => {
+Deno.test("Unbounded", async () => {
   const ub = new Unbounded<number>();
 
   const total = 10;

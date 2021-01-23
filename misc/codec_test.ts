@@ -1,7 +1,4 @@
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.83.0/testing/asserts.ts";
+import { assertEquals } from "../deps.ts";
 import { Decoder, Encoder } from "./codec.ts";
 
 Deno.test("encdec", () => {

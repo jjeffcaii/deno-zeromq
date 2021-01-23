@@ -33,7 +33,9 @@ interface Chunk {
 async function* iter(rep: ReplierImpl, mut: Unbounded<Chunk>) {
   while (true) {
     mut.load();
-    const { reqs, conn: active } = await mut.next();
+    const next = await mut.next();
+    if (next === null) return;
+    const { reqs, conn: active } = next;
     rep.active = active;
     yield reqs;
   }
