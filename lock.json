@@ -18,5 +18,7 @@
   "https://deno.land/std@0.84.0/log/handlers.ts": "8dfe91b35f58ec8b4401561a7561df4d40445e4f8bb26a8cfe13e38545c76414",
   "https://deno.land/std@0.84.0/log/levels.ts": "088a883039ece5fa0da5f74bc7688654045ea7cb01bf200b438191a28d728eae",
   "https://deno.land/std@0.84.0/log/logger.ts": "6b2dd8cbe6f407100b9becfe61595d7681f8ce3692412fad843de84d617a038e",
-  "https://deno.land/std@0.84.0/log/mod.ts": "b802000f30f7f15dcc02e7b350d4a7bfb927e1196169d708467af59032b669ea"
+  "https://deno.land/std@0.84.0/log/mod.ts": "b802000f30f7f15dcc02e7b350d4a7bfb927e1196169d708467af59032b669ea",
+  "https://deno.land/std@0.84.0/testing/_diff.ts": "961eaf6d9f5b0a8556c9d835bbc6fa74f5addd7d3b02728ba7936ff93364f7a3",
+  "https://deno.land/std@0.84.0/testing/asserts.ts": "de942b2e1cb6dac1c1c4a7b698be017337e2e2cc2252ae0a6d215c5befde1e82"
 }

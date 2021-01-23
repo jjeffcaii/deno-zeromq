@@ -1,4 +1,4 @@
-import { Decoder } from "../codec.ts";
+import { Decoder } from "../misc/mod.ts";
 
 export const FLAG_COMMAND = 1 << 2;
 export const FLAG_LONG = 1 << 1;

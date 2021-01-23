@@ -1,4 +1,4 @@
-import { Connector, Receiver, Sender, SocketType } from "./types.ts";
+import { Connector, Receiver, Sender, SocketType } from "../types.ts";
 import { Socket } from "./socket.ts";
 
 export interface Requester extends Connector, Sender, Receiver {

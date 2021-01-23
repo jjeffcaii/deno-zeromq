@@ -1,13 +1,13 @@
-import { Decoder, Encoder } from "../codec.ts";
+import { Decoder, Encoder } from "../misc/mod.ts";
 import { FLAG_COMMAND, Frame } from "./frame.ts";
-import { CommandName } from "./frame_command.ts";
+import { CommandFrame, CommandName } from "./frame_command.ts";
 
 export interface Builder {
   set(key: string, value: string): Builder;
   build(): ReadyCommandFrame;
 }
 
-export class ReadyCommandFrame extends Frame {
+export class ReadyCommandFrame extends CommandFrame {
   static builder(): Builder {
     return new BuilderImpl();
   }

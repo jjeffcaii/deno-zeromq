@@ -1,5 +1,4 @@
-import { FLAG_LONG, Frame } from "./frame.ts";
-import { Greeting } from "./greeting.ts";
+import { FLAG_LONG, Frame, Greeting } from "../proto/mod.ts";
 import { BufReader, BufWriter } from "../deps.ts";
 import { EOFError } from "../errors.ts";
 

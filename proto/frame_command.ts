@@ -1,4 +1,4 @@
-import { ASCII_DECODER } from "../misc.ts";
+import { ASCII_DECODER } from "../misc/mod.ts";
 import { Frame } from "./frame.ts";
 
 export enum CommandName {

@@ -1,15 +1,19 @@
-import { Connection } from "./protocol/connection.ts";
-import { bind, ServerTransport } from "./transport.ts";
-import { MessageLike, Sender, SocketType } from "./types.ts";
-import { log } from "./deps.ts";
-import { Frame, FrameType } from "./protocol/frame.ts";
-import { Greeting } from "./protocol/greeting.ts";
-import { METADATA_KEY_SOCKET_TYPE } from "./consts.ts";
-import { Unbounded } from "./unbounded.ts";
-import { EOFError } from "./errors.ts";
-import { DataFrame } from "./protocol/frame_data.ts";
-import { ReadyCommandFrame } from "./protocol/frame_command_ready.ts";
-import { CommandFrame, CommandName } from "./protocol/frame_command.ts";
+import { bind, Connection, ServerTransport } from "../transport/mod.ts";
+import { MessageLike, Sender, SocketType } from "../types.ts";
+import { log } from "../deps.ts";
+import {
+  CommandFrame,
+  CommandName,
+  DataFrame,
+  Frame,
+  FrameType,
+  Greeting,
+  ReadyCommandFrame,
+} from "../proto/mod.ts";
+import { METADATA_KEY_SOCKET_TYPE } from "../consts.ts";
+import { Unbounded } from "../misc/mod.ts";
+import { EOFError } from "../errors.ts";
+import { sendMessages } from "./utils.ts";
 
 export interface Replier extends Sender {
   [Symbol.asyncIterator](): AsyncIterableIterator<MessageLike[]>;
@@ -29,7 +33,9 @@ interface Chunk {
 async function* iter(rep: ReplierImpl, mut: Unbounded<Chunk>) {
   while (true) {
     mut.load();
-    const { reqs, conn: active } = await mut.next();
+    const next = await mut.next();
+    if (next === null) return;
+    const { reqs, conn: active } = next;
     rep.active = active;
     yield reqs;
   }
@@ -68,14 +74,9 @@ class ReplierImpl implements Replier {
   constructor() {
   }
 
-  async send(msg: MessageLike): Promise<void> {
+  async send(...msg: MessageLike[]): Promise<void> {
     if (!this.#active) throw new Error("No actived connection!");
-
-    await this.#active.write(Frame.EMPTY_HAS_MORE);
-    // write first
-    const first = DataFrame.builder().payload(msg).build();
-    await this.#active.write(first);
-    await this.#active.flush();
+    await sendMessages(this.#active, ...msg);
   }
 
   [Symbol.asyncIterator](): AsyncIterableIterator<MessageLike[]> {
