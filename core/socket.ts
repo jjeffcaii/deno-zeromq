@@ -19,6 +19,7 @@ import {
 } from "../proto/mod.ts";
 import { METADATA_KEY_IDENTITY, METADATA_KEY_SOCKET_TYPE } from "../consts.ts";
 import { ConnectionNotReadyError } from "../errors.ts";
+import { sendMessages } from "./utils.ts";
 
 export class Socket implements Connector, Sender, Receiver {
   private transport?: ClientTransport;
@@ -26,36 +27,27 @@ export class Socket implements Connector, Sender, Receiver {
   constructor(private socketType: SocketType) {
   }
 
-  async send(req: MessageLike, ...other: MessageLike[]): Promise<void> {
-    const c = (this.transport as ClientTransport).connected()!;
-    await c.write(Frame.EMPTY_HAS_MORE);
-
-    const [...rest,last] = [req, ...other];
-
-
-    rest.map(it => DataFrame.builder().hasMore(true).payload(it))
-
-
-    // write first
-    const first = DataFrame.builder()
-      .hasMore(other.length > 0)
-      .payload(req)
-      .build();
-    await c.write(first);
-
-    await c.flush();
+  async send(...msgs: MessageLike[]): Promise<void> {
+    const conn = this.transport!.connected()!;
+    await sendMessages(conn, ...msgs);
   }
 
   async receive(): Promise<MessageLike[]> {
     if (!this.transport) throw new ConnectionNotReadyError();
     const conn = (this.transport as ClientTransport).connected()!;
-    const first = await conn.read() as Frame;
-    if ((first.flags & FLAG_MORE) === 0) {
-      return [];
-    }
-    const next = await conn.read();
-    const data = new DataFrame(next.bytes());
-    return [data.payload];
+
+    const res = [];
+
+    let hasMore = false;
+    do {
+      const next = await conn.read();
+      hasMore = next.more();
+      if (next.size > 0) {
+        const data = new DataFrame(next.bytes());
+        res.push(data.payload);
+      }
+    } while (hasMore);
+    return res;
   }
 
   async connect(addr: string): Promise<void> {

@@ -9,5 +9,5 @@ for await (const messages of socket) {
       messages.map((it) => new TextDecoder().decode(it as Uint8Array)).join(",")
     }]`,
   );
-  socket.send("World");
+  socket.send("World", "World2");
 }

@@ -13,6 +13,7 @@ import {
 import { METADATA_KEY_SOCKET_TYPE } from "../consts.ts";
 import { Unbounded } from "../misc/mod.ts";
 import { EOFError } from "../errors.ts";
+import { sendMessages } from "./utils.ts";
 
 export interface Replier extends Sender {
   [Symbol.asyncIterator](): AsyncIterableIterator<MessageLike[]>;
@@ -71,14 +72,9 @@ class ReplierImpl implements Replier {
   constructor() {
   }
 
-  async send(msg: MessageLike): Promise<void> {
+  async send(...msg: MessageLike[]): Promise<void> {
     if (!this.#active) throw new Error("No actived connection!");
-
-    await this.#active.write(Frame.EMPTY_HAS_MORE);
-    // write first
-    const first = DataFrame.builder().payload(msg).build();
-    await this.#active.write(first);
-    await this.#active.flush();
+    await sendMessages(this.#active, ...msg);
   }
 
   [Symbol.asyncIterator](): AsyncIterableIterator<MessageLike[]> {
