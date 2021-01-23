@@ -1,22 +1,33 @@
+import {
+  assert,
+  assertEquals,
+} from "https://deno.land/std@0.83.0/testing/asserts.ts";
 import { Unbounded } from "./unbounded.ts";
 
 Deno.test("mux", async () => {
   const ub = new Unbounded<number>();
 
+  const total = 10;
+
   (async () => {
-    while (true) {
-      ub.load();
-      const next = await ub.next();
-      console.log("next:", next);
+    for (let i = 0; i < total; i++) {
+      await new Promise((res) => setTimeout(res, 50));
+      ub.push(i);
     }
+    ub.close();
   })();
 
-  let seq = 0;
-  setInterval(() => {
-    for (let i = 0; i < 3; i++) {
-      ub.push(++seq);
-    }
-  }, 1000);
+  let cnt = 0;
 
-  await new Promise((resolve) => setTimeout(resolve, 50000));
+  while (true) {
+    ub.load();
+    const next = await ub.next();
+    if (next === null) {
+      break;
+    }
+    console.log("next:", next);
+    cnt++;
+  }
+
+  assertEquals(cnt, total);
 });
