@@ -93,9 +93,7 @@ export class TcpClientTransport implements ClientTransport {
       hostname: this.hostname,
       port: this.port,
     });
-    const reader = new BufReader(rawConn);
-    const writer = new BufWriter(rawConn);
-    const conn = createConnection(reader, writer);
+    const conn = createConnection(rawConn);
     this.conn = conn;
     return conn;
   }
@@ -104,13 +102,6 @@ export class TcpClientTransport implements ClientTransport {
 async function* iter(listener?: Deno.Listener) {
   if (!listener) return;
   for await (const rawConn of listener) {
-    const reader = new BufReader(rawConn);
-    const writer = new BufWriter(rawConn);
-    yield createConnection(reader, writer, (): Promise<void> => {
-      return new Promise((resolve) => {
-        rawConn.close();
-        resolve();
-      });
-    });
+    yield createConnection(rawConn);
   }
 }

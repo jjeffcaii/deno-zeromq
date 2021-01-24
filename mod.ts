@@ -1,5 +1,4 @@
-export { SocketType } from "./types.ts";
 export type { MessageLike } from "./types.ts";
 
-export type { Replier, Requester } from "./core/mod.ts";
-export { Reply, Request } from "./core/mod.ts";
+export type { Publisher, Replier, Requester, Subscriber } from "./core/mod.ts";
+export { Publish, Reply, Request, Subscribe } from "./core/mod.ts";

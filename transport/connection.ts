@@ -1,9 +1,15 @@
 import { FLAG_LONG, Frame, Greeting } from "../proto/mod.ts";
-import { BufReader, BufWriter } from "../deps.ts";
+import { BufReader, BufWriter, log } from "../deps.ts";
 import { EOFError } from "../errors.ts";
 
 export interface Connection {
   [Symbol.asyncIterator](): AsyncIterableIterator<Frame>;
+
+  setTag(tag: string): Connection;
+
+  hasTag(tag: string): boolean;
+
+  listTags(): Set<string> | undefined;
 
   write(message: Greeting | Frame | Uint8Array): Promise<number>;
 
@@ -17,93 +23,98 @@ export interface Connection {
 
   flush(): Promise<void>;
 
-  close(): Promise<void>;
+  close(): void;
 
-  onClose(handler: (c: Connection) => void): void;
+  onceClose(handler: () => void): void;
 }
 
-export type Closer = () => Promise<void>;
-
-export const createConnection = (
-  reader: BufReader,
-  writer: BufWriter,
-  closer?: Closer,
-): Connection => {
-  return new ConnectionImpl(reader, writer, closer);
+export const createConnection = (conn: Deno.Conn): Connection => {
+  return new ConnectionImpl(conn);
 };
-
-const readGreeting = async (reader: BufReader): Promise<Greeting> => {
-  const b = new Uint8Array(Greeting.SIZE);
-  if (await reader.readFull(b) === null) throw new EOFError();
-  return new Greeting(b);
-};
-
-const readFrame = async (reader: BufReader): Promise<Frame> => {
-  let b = await reader.peek(2);
-  if (b === null) throw new EOFError();
-  const flag = b[0];
-
-  let size = 1;
-  if ((flag & FLAG_LONG) === 0) {
-    size += 1 + b[1];
-  } else {
-    b = await reader.peek(10);
-    if (b === null) throw new EOFError();
-    size += 8 + Number(new DataView(b.buffer).getBigUint64(2));
-  }
-  const body = new Uint8Array(size);
-  if (await reader.readFull(body) === null) throw new EOFError();
-  return new Frame(body);
-};
-
-async function* genFrames(reader: BufReader): AsyncIterableIterator<Frame> {
-  for (;;) {
-    yield await readFrame(reader);
-  }
-}
 
 class ConnectionImpl implements Connection {
-  #onClose?: (c: Connection) => void;
+  #conn: Deno.Conn;
+  #reader: BufReader;
+  #writer: BufWriter;
+  #closeHandlers?: Array<() => void>;
   #sig?: Uint8Array;
   #major?: number;
+  #tags?: Set<string>;
 
-  constructor(
-    private reader: BufReader,
-    private writer: BufWriter,
-    private closer?: Closer,
-  ) {
+  constructor(rawConn: Deno.Conn) {
+    this.#conn = rawConn;
+    this.#reader = new BufReader(rawConn);
+    this.#writer = new BufWriter(rawConn);
   }
 
-  async close(): Promise<void> {
-    await this.closer?.();
+  listTags(): Set<string> | undefined {
+    return this.#tags;
+  }
+
+  setTag(tag: string): Connection {
+    if (!this.#tags) {
+      this.#tags = new Set([tag]);
+    } else {
+      this.#tags?.add(tag);
+    }
+    return this;
+  }
+
+  hasTag(tag: string): boolean {
+    return !!this.#tags?.has(tag);
+  }
+
+  close(): void {
+    this.#conn.close();
   }
 
   async peekVersionMajor(): Promise<number> {
     if (this.#major) return this.#major;
-    const b = await this.reader.peek(11);
-    if (b == null) throw new EOFError();
-    this.#major = b[10];
-    return this.#major;
+    try {
+      const b = await this.#reader.peek(11);
+      if (b == null) throw new EOFError();
+      this.#major = b[10];
+      return this.#major;
+    } catch (e) {
+      this.notifyClose();
+      throw e;
+    }
   }
 
-  readGreeting(): Promise<Greeting> {
-    return readGreeting(this.reader);
+  async readGreeting(): Promise<Greeting> {
+    try {
+      const b = new Uint8Array(Greeting.SIZE);
+      if (await this.#reader.readFull(b) === null) throw new EOFError();
+      return new Greeting(b);
+    } catch (e) {
+      this.notifyClose();
+      throw e;
+    }
   }
 
   async peekSignature(): Promise<Uint8Array> {
-    if (this.#sig) return this.#sig;
-    const res = await this.reader.peek(10);
-    if (res === null) throw new EOFError();
-    this.#sig = res;
-    return res;
+    try {
+      if (this.#sig) return this.#sig;
+      const res = await this.#reader.peek(10);
+      if (res === null) throw new EOFError();
+      this.#sig = res;
+      return res;
+    } catch (e) {
+      this.notifyClose();
+      throw e;
+    }
   }
 
-  onClose(handler: (c: Connection) => void): void {
-    this.#onClose = handler;
+  onceClose(handler: () => void): void {
+    if (!this.#closeHandlers) {
+      this.#closeHandlers = [handler];
+    } else {
+      this.#closeHandlers.push(handler);
+    }
   }
 
   flush(): Promise<void> {
-    return this.writer.flush();
+    return this.#writer.flush();
   }
 
   write(message: Greeting | Frame | Uint8Array): Promise<number> {
@@ -115,23 +126,60 @@ class ConnectionImpl implements Connection {
     } else {
       b = message;
     }
-    return this.writer.write(b);
+    return this.#writer.write(b)
+      .catch((reason) => {
+        this.notifyClose();
+        throw reason;
+      });
   }
 
   async read(): Promise<Frame> {
     try {
-      return await readFrame(this.reader);
-    } catch (e) {
-      if (this.#onClose) {
-        const fn = this.#onClose;
-        this.#onClose = undefined;
-        fn(this);
+      let b = await this.#reader.peek(2);
+      if (b === null) throw new EOFError();
+      const flag = b[0];
+
+      let size = 1;
+      if ((flag & FLAG_LONG) === 0) {
+        size += 1 + b[1];
+      } else {
+        b = await this.#reader.peek(10);
+        if (b === null) throw new EOFError();
+        size += 8 + Number(new DataView(b.buffer).getBigUint64(2));
       }
+      const body = new Uint8Array(size);
+      if (await this.#reader.readFull(body) === null) throw new EOFError();
+      return new Frame(body);
+    } catch (e) {
+      this.notifyClose();
       throw e;
     }
   }
 
+  private notifyClose() {
+    while (true) {
+      const fn = this.#closeHandlers?.shift();
+      if (!fn) break;
+      try {
+        fn();
+      } catch (e) {
+        log.error(`exec onceClose failed: ${e}`);
+      }
+    }
+  }
+
+  private async *iter(): AsyncIterableIterator<Frame> {
+    for (;;) {
+      try {
+        yield await this.read();
+      } catch (e) {
+        this.notifyClose();
+        throw e;
+      }
+    }
+  }
+
   [Symbol.asyncIterator](): AsyncIterableIterator<Frame> {
-    return genFrames(this.reader);
+    return this.iter();
   }
 }

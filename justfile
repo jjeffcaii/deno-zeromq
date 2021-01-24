@@ -1,12 +1,13 @@
-alias rep := reply
-alias req := request
-
 fmt:
   deno fmt
 lock:
   rm -f lock.json
   deno cache --lock=lock.json --lock-write deps.ts
-reply:
+rep:
   deno run --allow-net ./examples/reply.ts
-request:
+req:
   deno run --allow-net ./examples/request.ts
+pub:
+  deno run --allow-net ./examples/pub.ts
+sub:
+  deno run --allow-net ./examples/sub.ts
