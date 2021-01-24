@@ -1,4 +1,3 @@
-import { debug } from "https://deno.land/std@0.84.0/log/mod.ts";
 import { UTF8_DECODER } from "../misc/mod.ts";
 import * as zmq from "../mod.ts";
 
